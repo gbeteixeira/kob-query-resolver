@@ -9,6 +9,9 @@
     "format": "biome check --write src/ && biome check --write test/",
     "prepare": "npm run build"
   },
+  "publishConfig": {
+    "@gbeteixeira:registry": "https://npm.pkg.github.com"
+  },
   "keywords": [
     "equation",
     "resolver",
