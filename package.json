@@ -1,6 +1,6 @@
 {
   "name": "@gbeteixeira/kobi-query-resolver",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A flexible query resolver for dynamic validations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,8 @@
     "prepare": "npm run build"
   },
   "publishConfig": {
-    "@gbeteixeira:registry": "https://npm.pkg.github.com"
+    "@gbeteixeira:registry": "https://npm.pkg.github.com",
+    "access": "public"
   },
   "keywords": [
     "equation",
