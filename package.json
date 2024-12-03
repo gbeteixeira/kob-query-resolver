@@ -1,7 +1,7 @@
 {
-  "name": "@kobi/equation-resolver",
+  "name": "@gbeteixeira/kobi-query-resolver",
   "version": "1.0.1",
-  "description": "A flexible equation resolver for dynamic validations",
+  "description": "A flexible query resolver for dynamic validations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -15,9 +15,10 @@
   "keywords": [
     "equation",
     "resolver",
-    "validation"
+    "validation",
+    "query"
   ],
-  "author": "Seu Nome",
+  "author": "Gabriel Teixeira",
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
