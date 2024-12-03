@@ -1,0 +1,28 @@
+{
+  "name": "@kobi/equation-resolver",
+  "version": "1.0.1",
+  "description": "A flexible equation resolver for dynamic validations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "format": "biome check --write src/ && biome check --write test/",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "equation",
+    "resolver",
+    "validation"
+  ],
+  "author": "Seu Nome",
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}
