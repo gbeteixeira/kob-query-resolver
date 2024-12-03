@@ -1,6 +1,6 @@
 {
   "name": "@gbeteixeira/kobi-query-resolver",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "A flexible query resolver for dynamic validations",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
