@@ -18,6 +18,7 @@ export type SimpleValidationRule =
     | { type: 'between', min: number, max: number }
     | { type: 'includes', values: any[] }
     | { type: 'number' }
+    | { type: 'array' }
     | { type: 'string' }
     | { type: 'boolean' }
     | { type: 'gte', value: number }

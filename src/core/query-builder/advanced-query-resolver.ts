@@ -11,6 +11,8 @@ export class AdvancedQueryResolver {
     private criteriaConfigs: Map<string, ICriteriaValidationConfig>;
     private language: string;
     private translations: Record<string, string>;
+    // biome-ignore lint/complexity/noBannedTypes: <explanation>
+    private customFunctions: Record<string, Function>;
 
     constructor(
         criteriaConfigs: ICriteriaValidationConfig[],
@@ -25,6 +27,79 @@ export class AdvancedQueryResolver {
 
         // Seleciona as traduções para o idioma
         this.translations = DEFAULT_TRANSLATIONS[this.language];
+
+        // Funções padrão extensivas
+        this.customFunctions = {
+            // Funções de verificação de estado
+            empty: (value: any) => {
+                if (value === null || value === undefined) return true;
+                if (typeof value === 'string') return value.trim().length === 0;
+                if (Array.isArray(value)) return value.length === 0;
+                if (typeof value === 'object') return Object.keys(value).length === 0;
+                return false;
+            },
+            notEmpty: (value: any) => !this.customFunctions.empty(value),
+            isNull: (value: any) => value === null,
+            isUndefined: (value: any) => value === undefined,
+            isDefined: (value: any) => value !== undefined && value !== null,
+
+            // Funções matemáticas
+            max: (...args: number[]) => Math.max(...args),
+            min: (...args: number[]) => Math.min(...args),
+            sum: (...args: number[]) => args.reduce((a, b) => a + b, 0),
+            avg: (...args: number[]) => args.reduce((a, b) => a + b, 0) / args.length,
+            abs: Math.abs,
+            round: Math.round,
+            ceil: Math.ceil,
+            floor: Math.floor,
+
+            // Funções de string
+            startsWith: (str: string, prefix: string) => str.startsWith(prefix),
+            endsWith: (str: string, suffix: string) => str.endsWith(suffix),
+            includes: (str: string, search: string) => str.includes(search),
+            toLowerCase: (str: string) => str.toLowerCase(),
+            toUpperCase: (str: string) => str.toUpperCase(),
+            trim: (str: string) => str.trim(),
+
+            // Funções de array
+            contains: (arr: any[], value: any) => arr.includes(value),
+            any: (arr: any[], predicate?: (item: any) => boolean) =>
+                predicate ? arr.some(predicate) : arr.some(Boolean),
+            all: (arr: any[], predicate?: (item: any) => boolean) =>
+                predicate ? arr.every(predicate) : arr.every(Boolean),
+
+            // Funções de tipo
+            isArray: Array.isArray,
+            isString: (value: any) => typeof value === 'string',
+            isNumber: (value: any) => typeof value === 'number' && !Number.isNaN(value),
+            isBoolean: (value: any) => typeof value === 'boolean',
+            isObject: (value: any) =>
+                value !== null && typeof value === 'object' && !Array.isArray(value),
+
+            // Funções de comparação
+            gt: (a: number, b: number) => a > b,
+            gte: (a: number, b: number) => a >= b,
+            lt: (a: number, b: number) => a < b,
+            lte: (a: number, b: number) => a <= b,
+            eq: (a: any, b: any) => a === b,
+            neq: (a: any, b: any) => a !== b,
+
+            // Funções de data
+            isToday: (date: Date | string) => {
+                const inputDate = new Date(date);
+                const today = new Date();
+                return inputDate.toDateString() === today.toDateString();
+            },
+            isWeekend: (date: Date | string) => {
+                const inputDate = new Date(date);
+                return inputDate.getDay() === 0 || inputDate.getDay() === 6;
+            },
+
+            // Funções de regex
+            match: (str: string, pattern: string | RegExp) =>
+                new RegExp(pattern).test(str),
+
+        };
     }
 
     private getCriteriaLabel(criteriaId: string): string {
@@ -168,6 +243,13 @@ export class AdvancedQueryResolver {
                                 });
                             }
                             break;
+                        case 'array':
+                            if (!Array.isArray(value)) {
+                                errors.custom = this.translate('errors.customValidationFailed', {
+                                    criteriaId: criteriaLabel
+                                });
+                            }
+                            break;
                         case 'custom':
                             if (!rule.validator(value)) {
                                 errors.custom = this.translate('errors.customValidationFailed', {
@@ -196,12 +278,12 @@ export class AdvancedQueryResolver {
         }
     }
 
-    private formatValue(value: any, criteriaId: string): string | boolean | number | null {
+    private formatValue(value: any, criteriaId: string): string | boolean | number | null | any {
         const config = this.criteriaConfigs.get(criteriaId);
 
         // Se o valor for nulo ou undefined
         if (value === null || value === undefined) return null;
-
+         
         // Formatação baseada em regras específicas
         if (config?.rules) {
             for (const rule of config.rules) {
@@ -211,6 +293,10 @@ export class AdvancedQueryResolver {
                         const numberValue = Number(value);
                         return Number.isNaN(numberValue) ? null : numberValue;
                     }
+
+                    case 'array':
+                        // Converte para string
+                        return Array.isArray(value) ? value : [value];
 
                     case 'string':
                         // Converte para string
@@ -247,15 +333,6 @@ export class AdvancedQueryResolver {
         return JSON.stringify(value);
     }
 
-    private processLogicalOperators(criteria: string): string {
-        // Substitui operadores textuais por operadores JavaScript
-        return criteria
-            .replace(/\bAND\b/g, '&&')
-            .replace(/\bOR\b/g, '||')
-            .replace(/\bNOT\b/g, '!')
-            .replace(/\b==\b/g, '===');
-    }
-
     replaceCriterionWithValues(criteria: string, data: IEquationData): string {
         let processedCriteria = criteria;
 
@@ -277,7 +354,9 @@ export class AdvancedQueryResolver {
                 }
 
                 processedCriteria = processedCriteria.replace(criteriaRegex, () => {
-                    return this.formatValue(value, criteriaId)?.toString() ?? 'null';
+                    const v = this.formatValue(value, criteriaId) ?? 'null';
+
+                    return JSON.stringify(v)
                 });
             }
         });
@@ -285,41 +364,69 @@ export class AdvancedQueryResolver {
         return processedCriteria;
     }
 
-    validate(criteria: string, data: IEquationData): { success: boolean; errors?: IFieldValidationResult[] } {
-        // Processa operadores lógicos
-        const processedCriteria = this.processLogicalOperators(criteria);
+    private createSandboxContext(data: IEquationData) {
+        // Cria um contexto de execução seguro
+        const sandboxContext: Record<string, any> = {
+            ...data,
+            ...this.customFunctions
+        };
 
-        // Identifica todos os critérios únicos na expressão
-        const uniqueCriterias = new Set<string>();
+        return sandboxContext;
+    }
+
+    validate(criteria: string, data: IEquationData): { success: boolean; errors?: IFieldValidationResult[] } {
+        // First, identify all unique criteria in the expression
+        const uniqueCriteria = new Set<string>();
         const criteriaRegex = /\{\{(\w+)\}\}/g;
         // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
         let match;
-
+    
         // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
-        while ((match = criteriaRegex.exec(processedCriteria)) !== null) {
-            uniqueCriterias.add(match[1]);
+            while ((match = criteriaRegex.exec(criteria)) !== null) {
+            uniqueCriteria.add(match[1]);
         }
-
-        // Valida cada critério
-        const validationResults = Array.from(uniqueCriterias).map(criteriaId =>
+    
+        // Validate each criterion first
+        const validationResults = Array.from(uniqueCriteria).map(criteriaId =>
             this.validateCriteria(criteriaId, data)
         );
-
-        // Filtra os critérios com falha na validação
+    
+        // Filter the criteria with validation failures
         const validationErrors = validationResults.filter(result => !result.success);
-
+    
+        // If there are validation errors, return them immediately
         if (validationErrors.length > 0) {
             return {
                 success: false,
                 errors: validationErrors,
             };
         }
-
-        // Substitui os critérios e avalia a expressão
+    
+        // If all criteria pass their individual validations, proceed with expression evaluation
         try {
-            const processedExpression = this.replaceCriterionWithValues(processedCriteria, data);
-            const result = new Function(`return ${processedExpression}`)();
+            // Replace criteria with their actual values
+            const processedCriteria = this.replaceCriterionWithValues(criteria, data);
 
+            // Create a sandbox context with data and custom functions
+            const sandboxContext = this.createSandboxContext(data);
+            
+            // Create a safer evaluation function with more comprehensive support
+            const evalFunction = new Function(
+                ...Object.keys(sandboxContext),
+                `
+                // Support for arrow functions
+                const arrowFn = (fn) => {
+                    return typeof fn === 'function' 
+                        ? fn 
+                        : (x) => x === fn;
+                };
+                
+                return ${processedCriteria}`
+            );
+    
+            // Execute the function with the sandbox context
+            const result = evalFunction(...Object.values(sandboxContext));
+    
             return { success: result === true };
         } catch (error) {
             return {
@@ -364,5 +471,11 @@ export class AdvancedQueryResolver {
             failedFields,
             overallSuccess: failedFields.length === 0
         };
+    }
+
+    // Método para permitir adicionar mais funções
+    // biome-ignore lint/complexity/noBannedTypes: <explanation>
+    addCustomFunction(name: string, func: Function) {
+        this.customFunctions[name] = func;
     }
 }

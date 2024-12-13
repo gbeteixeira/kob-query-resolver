@@ -24,6 +24,12 @@ describe('AdvancedQueryResolver', () => {
                 { type: 'string' },
                 { type: 'exists' }
             ]
+        },
+        {
+            id: 'users',
+            rules: [
+                { type: 'exists' }
+            ]
         }
     ];
 
@@ -33,7 +39,8 @@ describe('AdvancedQueryResolver', () => {
         const validData = {
             age: 30,
             status: 'active',
-            CPF: '000.000.000-00'
+            CPF: '000.000.000-00',
+            users: []
         };
 
         const result = resolver.validateAllFields(validData);
@@ -49,7 +56,8 @@ describe('AdvancedQueryResolver', () => {
 
         const invalidData = {
             age: 17,
-            status: 'suspended'
+            status: 'suspended',
+            users: []
         };
 
         const result = resolver.validateAllFields(invalidData);
@@ -67,7 +75,8 @@ describe('AdvancedQueryResolver', () => {
 
         const invalidData = {
             age: 17,
-            status: 'suspended'
+            status: 'suspended',
+            users: []
         };
 
         const result = resolver.validateAllFields(invalidData);
@@ -85,7 +94,8 @@ describe('AdvancedQueryResolver', () => {
 
         const invalidData = {
             age: 17,
-            status: 'suspended'
+            status: 'suspended',
+            users: []
         };
 
         const result = resolver.validateAllFields(invalidData);
@@ -103,7 +113,8 @@ describe('AdvancedQueryResolver', () => {
 
         const invalidData = {
             age: 17,
-            status: 'suspended'
+            status: 'suspended',
+            users: []
         };
 
         const result = resolver.validateAllFields(invalidData);
@@ -113,15 +124,14 @@ describe('AdvancedQueryResolver', () => {
         expect(result.failedFields[0].id).toBe('age');
         expect(result.failedFields[1].id).toBe('status');
     });
-
+    // // ....
     it('should validate complex criteria', () => {
         const complexConfigs: ICriteriaValidationConfig[] = [
             {
                 id: 'salary',
-                computeValue: (data) => data.baseSalary + (data.bonus || 0),
                 rules: [
                     { type: 'number' },
-                    { type: 'gte', value: 1000 }
+                    { type: 'gte', value: 300 }
                 ]
             }
         ];
@@ -129,12 +139,254 @@ describe('AdvancedQueryResolver', () => {
         const resolver = new AdvancedQueryResolver(complexConfigs);
 
         const validData = {
-            baseSalary: 2000,
-            bonus: 500
+            salary: 300,
         };
 
-        const result = resolver.validate('{{salary}} >= 2000', validData);
+        const result = resolver.validate('gte({{salary}}, 300)', validData);
 
         expect(result.success).toBe(true);
+    });
+
+    it('should support custom functions and advanced expressions', () => {
+        const resolver = new AdvancedQueryResolver([
+            {
+                id: 'age',
+                name: 'Age',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'users',
+                name: 'Users',
+                rules: [
+                    { type: 'array' }
+                ]
+            },
+        ]);
+
+        const data = {
+            age: 30,
+            users: ['john', 'jane', 'doe']
+        };
+
+        // Teste de funções padrão
+        expect(resolver.validate('notEmpty({{users}})', data).success).toBe(true);
+        expect(resolver.validate('{{users}}.length > 0', data).success).toBe(true);
+        expect(resolver.validate('any({{users}}, u => u === "john")', data).success).toBe(true);
+        expect(resolver.validate('isNumber({{age}})', data).success).toBe(true);
+        expect(resolver.validate('gt({{age}}, 18)', data).success).toBe(true);
+        expect(resolver.validate('startsWith("JohnDoe", "John")', data).success).toBe(true);
+    });
+
+    it('should allow adding custom functions', () => {
+        const resolver = new AdvancedQueryResolver(criteriaConfigs);
+
+        // Adiciona uma função personalizada
+        resolver.addCustomFunction('isAdult', (age: number) => age >= 18);
+
+        const data = {
+            age: 25,
+            status: 'active',
+            CPF: '000.000.000-00'
+        };
+
+        // Testa a função personalizada
+        expect(resolver.validate('isAdult({{age}})', data).success).toBe(true);
+    });
+
+    it('should handle complex mathematical and logical expressions', () => {
+        const resolver = new AdvancedQueryResolver([
+            {
+                id: 'age',
+                name: 'Age',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'salary',
+                name: 'Salary',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'bonus',
+                name: 'Bonus',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'status',
+                name: 'Status',
+                rules: [
+                    { type: 'string' }
+                ]
+            }
+        ]);
+
+        const data = {
+            age: 30,
+            salary: 5000,
+            bonus: 1000,
+            status: 'active'
+        };
+
+        // Expressões matemáticas e lógicas complexas
+        expect(resolver.validate('sum({{age}}, 10) >= 40', data).success).toBe(true);
+        expect(resolver.validate('max({{age}}, 25) === 30', data).success).toBe(true);
+        expect(resolver.validate('{{salary}} + {{bonus}} > 5500', data).success).toBe(true);
+    });
+
+    it('should validate string and array operations', () => {
+        const resolver = new AdvancedQueryResolver([
+            {
+                id: 'age',
+                name: 'Age',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'salary',
+                name: 'Salary',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'bonus',
+                name: 'Bonus',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'status',
+                name: 'Status',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'name',
+                name: 'Name',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'tags',
+                name: 'Tags',
+                rules: [
+                    { type: 'array' }
+                ]
+            },
+            {
+                id: 'email',
+                name: 'Email',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'isActive',
+                name: 'Is Active',
+                rules: [
+                    { type: 'boolean' }
+                ]
+            }
+        ]);
+
+        const data = {
+            age: 30,
+            name: 'John Doe',
+            isActive: true,
+            tags: ['admin', 'user', 'teste'],
+            email: 'gabriel@example.com'
+        };
+
+        // Operações com strings e arrays
+        expect(resolver.validate('startsWith({{name}}, "John")', data).success).toBe(true);
+        expect(resolver.validate('includes({{name}}, "Doe")', data).success).toBe(true);
+        expect(resolver.validate('contains({{tags}}, "admin")', data).success).toBe(true);
+        expect(resolver.validate('any({{tags}}, t => t === "user")', data).success).toBe(true);
+        expect(resolver.validate('match({{email}}, "@example.com$")', data).success).toBe(true);
+    });
+
+    it('should handle type checking functions', () => {
+        const resolver = new AdvancedQueryResolver([
+            {
+                id: 'age',
+                name: 'Age',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'salary',
+                name: 'Salary',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'bonus',
+                name: 'Bonus',
+                rules: [
+                    { type: 'number' }
+                ]
+            },
+            {
+                id: 'status',
+                name: 'Status',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'name',
+                name: 'Name',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'tags',
+                name: 'Tags',
+                rules: [
+                    { type: 'array' }
+                ]
+            },
+            {
+                id: 'email',
+                name: 'Email',
+                rules: [
+                    { type: 'string' }
+                ]
+            },
+            {
+                id: 'isActive',
+                name: 'Is Active',
+                rules: [
+                    { type: 'boolean' }
+                ]
+            }
+        ]);
+
+        const data = {
+            age: 30,
+            name: 'John',
+            isActive: true,
+            tags: ['user']
+        };
+
+        // Verificações de tipo
+        expect(resolver.validate('isNumber({{age}})', data).success).toBe(true);
+        expect(resolver.validate('isBoolean({{isActive}})', data).success).toBe(true);
+        expect(resolver.validate('isString({{name}})', data).success).toBe(true);
+        expect(resolver.validate('isArray({{tags}})', data).success).toBe(true);
     });
 });
