@@ -33,12 +33,16 @@ export class AdvancedQueryResolver {
             // Funções de verificação de estado
             empty: (value: any) => {
                 if (value === null || value === undefined) return true;
+                if (value === "null" || value === "undefined") return true;
                 if (typeof value === 'string') return value.trim().length === 0;
                 if (Array.isArray(value)) return value.length === 0;
                 if (typeof value === 'object') return Object.keys(value).length === 0;
                 return false;
             },
-            notEmpty: (value: any) => !this.customFunctions.empty(value),
+            notEmpty: (value: any) => {
+                console.log("value", value)
+                return !this.customFunctions.empty(value)
+            },
             isNull: (value: any) => value === null,
             isUndefined: (value: any) => value === undefined,
             isDefined: (value: any) => value !== undefined && value !== null,
@@ -127,7 +131,7 @@ export class AdvancedQueryResolver {
 
         if (!config) {
             throw new Error(this.translate('errors.criteriaNotConfigured', {
-                criteriaId: criteriaLabel
+                criterion: criteriaLabel
             }));
         }
 
@@ -146,14 +150,14 @@ export class AdvancedQueryResolver {
                         case 'exists':
                             if (value === undefined || value === null) {
                                 errors.exists = this.translate('errors.criteriaExists', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'in':
                             if (!rule.values.includes(value)) {
                                 errors.in = this.translate('errors.criteriaIn', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     values: JSON.stringify(rule.values)
                                 });
                             }
@@ -163,20 +167,20 @@ export class AdvancedQueryResolver {
                                 const hasAllValues = rule.values.every(val => value.includes(val));
                                 if (!hasAllValues) {
                                     errors.includes = this.translate('errors.criteriaIncludes', {
-                                        criteriaId: criteriaLabel,
+                                        criterion: criteriaLabel,
                                         values: JSON.stringify(rule.values)
                                     });
                                 }
                             } else {
                                 errors.includes = this.translate('errors.criteriaArray', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'between':
                             if (typeof value !== 'number' || value < rule.min || value > rule.max) {
                                 errors.between = this.translate('errors.betweenRange', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     min: rule.min,
                                     max: rule.max
                                 });
@@ -185,28 +189,28 @@ export class AdvancedQueryResolver {
                         case 'number':
                             if (typeof value !== 'number') {
                                 errors.number = this.translate('errors.numberType', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'string':
                             if (typeof value !== 'string') {
                                 errors.string = this.translate('errors.stringType', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'boolean':
                             if (typeof value !== 'boolean') {
                                 errors.boolean = this.translate('errors.booleanType', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'gte':
                             if (typeof value !== 'number' || value < rule.value) {
                                 errors.gte = this.translate('errors.greaterThanEqual', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     value: rule.value
                                 });
                             }
@@ -214,7 +218,7 @@ export class AdvancedQueryResolver {
                         case 'lte':
                             if (typeof value !== 'number' || value > rule.value) {
                                 errors.lte = this.translate('errors.lessThanEqual', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     value: rule.value
                                 });
                             }
@@ -222,7 +226,7 @@ export class AdvancedQueryResolver {
                         case 'gt':
                             if (typeof value !== 'number' || value <= rule.value) {
                                 errors.gt = this.translate('errors.greaterThan', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     value: rule.value
                                 });
                             }
@@ -230,7 +234,7 @@ export class AdvancedQueryResolver {
                         case 'lt':
                             if (typeof value !== 'number' || value >= rule.value) {
                                 errors.lt = this.translate('errors.lessThan', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     value: rule.value
                                 });
                             }
@@ -238,7 +242,7 @@ export class AdvancedQueryResolver {
                         case 'eq':
                             if (value !== rule.value) {
                                 errors.eq = this.translate('errors.equalTo', {
-                                    criteriaId: criteriaLabel,
+                                    criterion: criteriaLabel,
                                     value: rule.value
                                 });
                             }
@@ -246,14 +250,14 @@ export class AdvancedQueryResolver {
                         case 'array':
                             if (!Array.isArray(value)) {
                                 errors.custom = this.translate('errors.customValidationFailed', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
                         case 'custom':
                             if (!rule.validator(value)) {
                                 errors.custom = this.translate('errors.customValidationFailed', {
-                                    criteriaId: criteriaLabel
+                                    criterion: criteriaLabel
                                 });
                             }
                             break;
@@ -268,7 +272,7 @@ export class AdvancedQueryResolver {
             };
         } catch (error) {
             errors.compute = this.translate('errors.computeValueFailed', {
-                criteriaId: criteriaLabel
+                criterion: criteriaLabel
             });
             return {
                 criteria: criteriaId,
@@ -282,8 +286,14 @@ export class AdvancedQueryResolver {
         const config = this.criteriaConfigs.get(criteriaId);
 
         // Se o valor for nulo ou undefined
-        if (value === null || value === undefined) return null;
-         
+        if (value === null || value === undefined) {
+            return value === null || value === undefined
+                ? String(value) // 'null' ou 'undefined'
+                : typeof value === 'string'
+                    ? `'${value}'` // strings precisam de aspas
+                    : value; // números e booleanos
+        }
+
         // Formatação baseada em regras específicas
         if (config?.rules) {
             for (const rule of config.rules) {
@@ -347,12 +357,6 @@ export class AdvancedQueryResolver {
                     ? config.computeValue(data)
                     : data[criteriaId];
 
-                if (value === undefined || value === null) {
-                    throw new EquationValidationError(this.translate('errors.criteriaNotConfigured', {
-                        criteriaId: this.getCriteriaLabel(criteriaId)
-                    }));
-                }
-
                 processedCriteria = processedCriteria.replace(criteriaRegex, () => {
                     const v = this.formatValue(value, criteriaId) ?? 'null';
 
@@ -380,20 +384,20 @@ export class AdvancedQueryResolver {
         const criteriaRegex = /\{\{(\w+)\}\}/g;
         // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
         let match;
-    
+
         // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
-            while ((match = criteriaRegex.exec(criteria)) !== null) {
+        while ((match = criteriaRegex.exec(criteria)) !== null) {
             uniqueCriteria.add(match[1]);
         }
-    
+
         // Validate each criterion first
         const validationResults = Array.from(uniqueCriteria).map(criteriaId =>
             this.validateCriteria(criteriaId, data)
         );
-    
+
         // Filter the criteria with validation failures
         const validationErrors = validationResults.filter(result => !result.success);
-    
+
         // If there are validation errors, return them immediately
         if (validationErrors.length > 0) {
             return {
@@ -401,15 +405,17 @@ export class AdvancedQueryResolver {
                 errors: validationErrors,
             };
         }
-    
+
         // If all criteria pass their individual validations, proceed with expression evaluation
         try {
             // Replace criteria with their actual values
             const processedCriteria = this.replaceCriterionWithValues(criteria, data);
 
+            console.log(processedCriteria)
+
             // Create a sandbox context with data and custom functions
             const sandboxContext = this.createSandboxContext(data);
-            
+
             // Create a safer evaluation function with more comprehensive support
             const evalFunction = new Function(
                 ...Object.keys(sandboxContext),
@@ -423,10 +429,10 @@ export class AdvancedQueryResolver {
                 
                 return ${processedCriteria}`
             );
-    
+
             // Execute the function with the sandbox context
             const result = evalFunction(...Object.values(sandboxContext));
-    
+
             return { success: result === true };
         } catch (error) {
             return {
