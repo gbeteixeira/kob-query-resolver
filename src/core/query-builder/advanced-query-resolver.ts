@@ -342,29 +342,24 @@ export class AdvancedQueryResolver {
         return JSON.stringify(value);
     }
 
-    replaceCriterionWithValues(criteria: string, data: IEquationData): string {
-        let processedCriteria = criteria;
-
-        Array.from(this.criteriaConfigs.keys()).forEach(criteriaId => {
-            const config = this.criteriaConfigs.get(criteriaId)!;
-            const criteriaRegex = new RegExp(`\\{\\{${criteriaId}\\}\\}`, 'g');
-
-            // Substituição do critério pelo seu valor
-            if (criteriaRegex.test(processedCriteria)) {
-                // Calcula o valor do critério
-                const value = config.computeValue
-                    ? config.computeValue(data)
-                    : data[criteriaId];
-
-                processedCriteria = processedCriteria.replace(criteriaRegex, () => {
-                    const v = this.formatValue(value, criteriaId) ?? 'null';
-
-                    return JSON.stringify(v)
-                });
+    /**
+     * Replaces criteria placeholders with their actual values
+     */
+    private replaceCriterionWithValues(criteria: string, data: IEquationData): string {
+        const criteriaRegex = /{{([^}]+)}}/g;
+        return criteria.replace(criteriaRegex, (_, criterionId) => {
+            const value = data[criterionId];
+            if (typeof value === 'string') {
+                return `"${value}"`;
+            } else if (typeof value === 'number') {
+                return value.toString();
+            } else if (value === null) {
+                return 'null';
+            } else if (value === undefined) {
+                return 'undefined';
             }
+            return JSON.stringify(value);
         });
-
-        return processedCriteria;
     }
 
     private createSandboxContext(data: IEquationData) {
@@ -474,6 +469,16 @@ export class AdvancedQueryResolver {
             failedFields,
             overallSuccess: failedFields.length === 0
         };
+    }
+
+    /**
+     * Returns the query with all criteria replaced by their actual values
+     * @param criteria The criteria string containing placeholders
+     * @param data The data object containing values
+     * @returns The processed query with actual values
+     */
+    public getProcessedQuery(criteria: string, data: IEquationData): string {
+        return this.replaceCriterionWithValues(criteria, data);
     }
 
     // Método para permitir adicionar mais funções

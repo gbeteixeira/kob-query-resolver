@@ -419,4 +419,49 @@ describe('AdvancedQueryResolver', () => {
         expect(result2.success).toBe(true);
     });
     
+    it('should handle complex logical expressions with empty values', () => {
+        const resolver = new AdvancedQueryResolver([
+            { id: '1399745538', type: 'string' },
+            { id: '1399745539', type: 'number' }
+        ]);
+        const data = {
+            '1399745538': '',
+            '1399745539': 60
+        };
+
+        const result = resolver.validate('(notEmpty({{1399745538}}) || gte({{1399745539}}, 65))', data);
+        expect(result.success).toBe(false);
+
+        // Teste também com null
+        const dataWithNull = {
+            '1399745538': null,
+            '1399745539': 60
+        };
+
+        const resultWithNull = resolver.validate('(notEmpty({{1399745538}}) || gte({{1399745539}}, 65))', dataWithNull);
+        expect(resultWithNull.success).toBe(false);
+    });
+
+    it('should return processed query with replaced values', () => {
+        const resolver = new AdvancedQueryResolver([
+            { id: '1399745538', type: 'string' },
+            { id: '1399745539', type: 'number' }
+        ]);
+        
+        const data = {
+            '1399745538': '',
+            '1399745539': 60
+        };
+
+        const processedQuery = resolver.getProcessedQuery('(notEmpty({{1399745538}}) || gte({{1399745539}}, 65))', data);
+        expect(processedQuery).toBe('(notEmpty("") || gte(60, 65))');
+
+        const dataWithNull = {
+            '1399745538': null,
+            '1399745539': 60
+        };
+
+        const processedQueryWithNull = resolver.getProcessedQuery('(notEmpty({{1399745538}}) || gte({{1399745539}}, 65))', dataWithNull);
+        expect(processedQueryWithNull).toBe('(notEmpty(null) || gte(60, 65))');
+    });
 });
