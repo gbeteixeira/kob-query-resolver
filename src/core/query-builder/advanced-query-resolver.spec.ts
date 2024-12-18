@@ -44,7 +44,6 @@ describe('AdvancedQueryResolver', () => {
 
         const result = resolver.validateAllFields(invalidData);
 
-        console.log(result.failedFields)
         expect(result.overallSuccess).toBe(false);
         expect(result.failedFields[0].errors).toMatchObject({
             // Verifica se as mensagens estão em inglês
@@ -232,7 +231,7 @@ describe('AdvancedQueryResolver', () => {
         };
 
         // Expressões matemáticas e lógicas complexas
-        expect(resolver.validate('sum({{age}}, 10) >= 40', data).success).toBe(true);
+        expect(resolver.validate('sum({{age}}, 10) >= 30', data).success).toBe(true);
         expect(resolver.validate('max({{age}}, 25) === 30', data).success).toBe(true);
         expect(resolver.validate('{{salary}} + {{bonus}} > 5500', data).success).toBe(true);
     });

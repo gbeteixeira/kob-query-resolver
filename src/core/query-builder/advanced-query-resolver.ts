@@ -40,7 +40,6 @@ export class AdvancedQueryResolver {
                 return false;
             },
             notEmpty: (value: any) => {
-                console.log("value", value)
                 return !this.customFunctions.empty(value)
             },
             isNull: (value: any) => value === null,
@@ -410,8 +409,6 @@ export class AdvancedQueryResolver {
         try {
             // Replace criteria with their actual values
             const processedCriteria = this.replaceCriterionWithValues(criteria, data);
-
-            console.log(processedCriteria)
 
             // Create a sandbox context with data and custom functions
             const sandboxContext = this.createSandboxContext(data);
