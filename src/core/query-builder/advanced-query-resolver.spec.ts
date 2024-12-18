@@ -421,8 +421,14 @@ describe('AdvancedQueryResolver', () => {
     
     it('should handle complex logical expressions with empty values', () => {
         const resolver = new AdvancedQueryResolver([
-            { id: '1399745538', type: 'string' },
-            { id: '1399745539', type: 'number' }
+            { 
+                id: '1399745538',
+                rules: [{ type: 'string' }]
+            },
+            { 
+                id: '1399745539',
+                rules: [{ type: 'number' }]
+            }
         ]);
         const data = {
             '1399745538': '',
@@ -444,8 +450,14 @@ describe('AdvancedQueryResolver', () => {
 
     it('should return processed query with replaced values', () => {
         const resolver = new AdvancedQueryResolver([
-            { id: '1399745538', type: 'string' },
-            { id: '1399745539', type: 'number' }
+            { 
+                id: '1399745538',
+                rules: [{ type: 'string' }]
+            },
+            { 
+                id: '1399745539',
+                rules: [{ type: 'number' }]
+            }
         ]);
         
         const data = {

@@ -141,7 +141,25 @@ export class AdvancedQueryResolver {
                 ? config.computeValue(data)
                 : data[criteriaId];
 
-            value = this.formatValue(value, criteriaId);
+            // Format value based on type rules before validation
+            if (config.rules) {
+                const typeRule = config.rules.find(rule => rule.type === 'number' || rule.type === 'string' || rule.type === 'boolean');
+                if (typeRule) {
+                    switch (typeRule.type) {
+                        case 'number': {
+                            const numValue = Number(value);
+                            value = !Number.isNaN(numValue) ? numValue : null;
+                            break;
+                        }
+                        case 'string':
+                            value = String(value);
+                            break;
+                        case 'boolean':
+                            value = Boolean(value);
+                            break;
+                    }
+                }
+            }
 
             if (config.rules) {
                 for (const rule of config.rules) {
@@ -342,23 +360,54 @@ export class AdvancedQueryResolver {
         return JSON.stringify(value);
     }
 
-    /**
-     * Replaces criteria placeholders with their actual values
-     */
     private replaceCriterionWithValues(criteria: string, data: IEquationData): string {
         const criteriaRegex = /{{([^}]+)}}/g;
         return criteria.replace(criteriaRegex, (_, criterionId) => {
-            const value = data[criterionId];
-            if (typeof value === 'string') {
-                return `"${value}"`;
-            } else if (typeof value === 'number') {
-                return value.toString();
-            } else if (value === null) {
+            const config = this.criteriaConfigs.get(criterionId);
+            const value = config?.computeValue ? config.computeValue(data) : data[criterionId];
+
+            // Convert string 'null' or 'undefined' to actual values
+            if (value === 'null' || value === null) {
                 return 'null';
-            } else if (value === undefined) {
+            }
+            if (value === undefined || value === 'undefined') {
                 return 'undefined';
             }
-            return JSON.stringify(value);
+
+            // Check for type rules and convert value accordingly
+            if (config?.rules) {
+                const typeRule = config.rules.find(rule => rule.type === 'number' || rule.type === 'string' || rule.type === 'boolean');
+                if (typeRule) {
+                    switch (typeRule.type) {
+                        case 'number': {
+                            const numValue = Number(value);
+                            return !Number.isNaN(numValue) ? String(numValue) : 'null';
+                        }
+                        case 'string': {
+                            // Empty string should remain as empty string with quotes
+                            return `"${String(value)}"`;
+                        }
+                        case 'boolean': {
+                            const boolValue = value === '' ? false : Boolean(value);
+                            return String(boolValue);
+                        }
+                    }
+                }
+            }
+
+            // Default formatting based on value type
+            switch (typeof value) {
+                case 'string':
+                    return `"${value}"`;
+                case 'number':
+                    return String(value);
+                case 'boolean':
+                    return String(value);
+                case 'object':
+                    return JSON.stringify(value);
+                default:
+                    return JSON.stringify(value);
+            }
         });
     }
 
@@ -375,9 +424,8 @@ export class AdvancedQueryResolver {
     validate(criteria: string, data: IEquationData): { success: boolean; errors?: IFieldValidationResult[] } {
         // First, identify all unique criteria in the expression
         const uniqueCriteria = new Set<string>();
-        const criteriaRegex = /\{\{(\w+)\}\}/g;
-        // biome-ignore lint/suspicious/noImplicitAnyLet: <explanation>
-        let match;
+        const criteriaRegex = /{{(\w+)}}/g;
+        let match: RegExpExecArray | null;
 
         // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
         while ((match = criteriaRegex.exec(criteria)) !== null) {
@@ -412,14 +460,19 @@ export class AdvancedQueryResolver {
             const evalFunction = new Function(
                 ...Object.keys(sandboxContext),
                 `
-                // Support for arrow functions
-                const arrowFn = (fn) => {
-                    return typeof fn === 'function' 
-                        ? fn 
-                        : (x) => x === fn;
-                };
-                
-                return ${processedCriteria}`
+                try {
+                    // Support for arrow functions
+                    const arrowFn = (fn) => {
+                        return typeof fn === 'function' 
+                            ? fn 
+                            : (x) => x === fn;
+                    };
+                    
+                    return ${processedCriteria};
+                } catch (e) {
+                    throw new Error('Expression evaluation failed: ' + e.message);
+                }
+                `
             );
 
             // Execute the function with the sandbox context
