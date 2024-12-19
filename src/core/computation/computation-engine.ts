@@ -2,7 +2,7 @@ import { IEquationData } from '../../models';
 
 export class ComputationEngine {
     // biome-ignore lint/complexity/noBannedTypes: <explanation>
-    private readonly functions: Record<string, Function>;
+    public readonly functions: Record<string, Function>;
 
     constructor() {
         this.functions = {

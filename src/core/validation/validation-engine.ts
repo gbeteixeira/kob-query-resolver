@@ -115,9 +115,18 @@ export class ValidationEngine {
     public validateCriteria(
         data: IEquationData,
         config: ICriteriaValidationConfig,
-        translations: Record<string, string>
+        translations: Record<string, string>,
+        convertToAppropriateType?: (value: any, config?: ICriteriaValidationConfig, data?: IEquationData) => any
     ): IFieldValidationResult {
-        const value = config.computeValue ? config.computeValue(data) : data[config.id];
+        const value = config.computeValue 
+            ? config.computeValue(data) 
+            : data[config.id];
+
+        // Use type conversion if provided
+        const convertedValue = convertToAppropriateType 
+            ? convertToAppropriateType(value, config, data)
+            : value;
+
         const errors: { [key: string]: string } = {};
 
         if (!config.rules || config.rules.length === 0) {
@@ -130,12 +139,21 @@ export class ValidationEngine {
 
         for (const rule of config.rules) {
             try {
-                if (!this.validateRule(value, rule)) {
+                if (!this.validateRule(convertedValue, rule)) {
                     const errorKey = this.getErrorKey(rule);
-                    errors[rule.type] = translations[errorKey] || `Validation failed for rule ${rule.type}`;
+                    const errorTemplate = translations[errorKey] 
+                        || translations['errors.numberType']  // Fallback to generic number error
+                        || `Validation failed for rule ${rule.type}`;
+                    
+                    // Replace {{criterion}} with config name or ID
+                    const errorMessage = errorTemplate.replace('{{criterion}}', config.name || config.id);
+                    
+                    errors[rule.type] = errorMessage;
                 }
             } catch (error) {
-                errors[rule.type] = error instanceof Error ? error.message : 'Unknown validation error';
+                errors[rule.type] = error instanceof Error 
+                    ? error.message 
+                    : 'Unknown validation error';
             }
         }
 

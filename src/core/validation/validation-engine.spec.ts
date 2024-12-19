@@ -164,5 +164,25 @@ describe('ValidationEngine', () => {
             expect(result.success).toBe(true);
             expect(result.errors).toBeNull();
         });
+
+        it('should fail validation when age is NULL', () => {
+            const ageConfig: ICriteriaValidationConfig = {
+                id: 'age',
+                rules: [
+                    { type: 'exists' },
+                    { type: 'number' }
+                ]
+            };
+
+            const result = engine.validateCriteria(
+                { age: null }, 
+                ageConfig, 
+                mockTranslations
+            );
+
+            expect(result.success).toBe(false);
+            expect(result.errors).toBeTruthy();
+            expect(Object.keys(result.errors || {})).toContain('exists');
+        });
     });
 });
