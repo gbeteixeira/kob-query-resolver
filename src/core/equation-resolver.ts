@@ -103,12 +103,26 @@ export class EquationResolver {
             }
 
             try {
-                return this.validationEngine.validateCriteria(
+                const validCriteria =  this.validationEngine.validateCriteria(
                     data, 
                     config, 
                     this.translations,
                     this.convertToAppropriateType
                 );
+
+                if(!validCriteria.success) return validCriteria
+
+                const validExpression= config.equation && validCriteria.success
+                    ? this.validateEquationExpression(config.equation, [data])
+                    : true; 
+
+                const err = [] as any
+                if (!validExpression) {
+                    err['errors.expression'] = "Error"
+                }
+
+                return { criteria: config.id, success: validExpression, errors: err };
+
             } catch (error) {
                 throw new ConfigurationError(
                     `Failed to validate criteria ${config.id}`,

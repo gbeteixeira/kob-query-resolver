@@ -38,6 +38,7 @@ export interface IFieldValidationResult {
 export interface ICriteriaValidationConfig {
     id: string;
     name?: string;
+    equation?: string;
     rules?: SimpleValidationRule[];
     computeValue?: (data: IEquationData) => number | string | boolean | null;
 }

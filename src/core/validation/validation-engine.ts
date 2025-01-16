@@ -1,5 +1,5 @@
 import { ValidationError } from '../../errors/base-error';
-import { ICriteriaValidationConfig, IEquationData, IFieldValidationResult, SimpleValidationRule } from '../../models';
+import { ICriteriaValidationConfig, IEquationData, IFieldValidationResult, SimpleValidationRule, type IFieldValidationSummary } from '../../models';
 
 export class ValidationEngine {
     private validateExists(value: unknown): boolean {
